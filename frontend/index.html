@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevOps Week 4 — Docker</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 4rem auto; padding: 0 1rem; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 1.5rem; }
+    code { background: #f4f4f4; padding: .2rem .4rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Docker Multi-Container Application</h1>
+    <p>Frontend → Backend → PostgreSQL</p>
+    <p id="status">Checking backend and database…</p>
+    <pre id="details"></pre>
+  </div>
+<script>
+  fetch("/api/health")
+    .then(async response => {
+      const data = await response.json();
+      document.querySelector("#status").textContent =
+        response.ok ? "✓ Backend and database are healthy" : "⚠ Backend/database health check failed";
+      document.querySelector("#details").textContent = JSON.stringify(data, null, 2);
+    })
+    .catch(error => {
+      document.querySelector("#status").textContent = "✗ API unavailable";
+      document.querySelector("#details").textContent = error.message;
+    });
+</script>
+</body>
+</html>

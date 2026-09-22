@@ -1,0 +1,117 @@
+services:
+
+  frontend:
+    build:
+      context: ./frontend
+
+    image: ${DOCKERHUB_USERNAME}/week4-frontend:${IMAGE_TAG:-1.0.0}
+
+    restart: unless-stopped
+
+    ports:
+      - "${APP_PORT:-8080}:8080"
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    networks:
+      - edge
+      - backend
+
+    read_only: true
+
+    tmpfs:
+      - /var/cache/nginx:mode=1777
+      - /var/run:mode=1777
+      - /tmp:mode=1777
+
+    security_opt:
+      - no-new-privileges:true
+
+
+  backend:
+    build:
+      context: ./backend
+
+    image: ${DOCKERHUB_USERNAME}/week4-backend:${IMAGE_TAG:-1.0.0}
+
+    restart: unless-stopped
+
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-appdb}
+      DB_USER: ${DB_USER:-appuser}
+      DB_PASSWORD: ${DB_PASSWORD:-apppassword}
+
+    expose:
+      - "3000"
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    networks:
+      - backend
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    security_opt:
+      - no-new-privileges:true
+
+
+  db:
+    image: postgres:18-alpine
+
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${DB_NAME:-appdb}
+      POSTGRES_USER: ${DB_USER:-appuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-apppassword}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+    networks:
+      - backend
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-appuser} -d ${DB_NAME:-appdb}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    security_opt:
+      - no-new-privileges:true
+
+
+volumes:
+  postgres_data:
+    name: docker-week4-productioncd_postgres_data
+
+
+networks:
+  edge:
+    driver: bridge
+
+  backend:
+    driver: bridge
+    internal: true
